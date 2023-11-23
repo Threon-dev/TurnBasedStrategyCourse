@@ -3,10 +3,12 @@ using UnityEngine;
 
 public class Unit : MonoBehaviour
 {
-    private const int ACTION_POINTS_MAX = 2;
 
     public static event Action OnAnyActionPointsChanged;
-    
+
+    [SerializeField] private bool isEnemy;
+
+    private const int ACTION_POINTS_MAX = 2;
     private GridPosition _gridPosition;
     private MoveAction _moveAction;
     private SpinAction _spinAction;
@@ -88,8 +90,18 @@ public class Unit : MonoBehaviour
     
     private void OnTurnChanged()
     {
-        _actionPoints = ACTION_POINTS_MAX;
+        if ((IsEnemy() && !TurnSystem.Instance.IsPlayerTurn()) ||
+            (!IsEnemy() && TurnSystem.Instance.IsPlayerTurn())
+           )
+        {
+            _actionPoints = ACTION_POINTS_MAX;
         
-        OnAnyActionPointsChanged?.Invoke();
+            OnAnyActionPointsChanged?.Invoke();
+        }
+    }
+
+    public bool IsEnemy()
+    {
+        return isEnemy;
     }
 }

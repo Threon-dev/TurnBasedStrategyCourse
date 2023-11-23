@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,6 +10,11 @@ public class ActionButtonUI : MonoBehaviour
     [SerializeField] private GameObject selectedGameObject;
 
     private BaseAction _baseAction;
+
+    private void Start()
+    {
+        UpdateSelectedVisual();
+    }
 
     public void SetBaseAction(BaseAction baseAction)
     {
