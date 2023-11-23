@@ -1,16 +1,20 @@
 using System;
-using System.Security.Cryptography;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class UnitActionSystem : MonoBehaviour
 {
     public static UnitActionSystem Instance { get; private set; }
     
     public event Action OnSelectedUnitChanged;
+    public event Action OnSelectedActionChanged;
     public Unit SelectedUnit => selectedUnit;
     
     [SerializeField] private Unit selectedUnit;
     [SerializeField] private LayerMask unitLayerMask;
+
+    private BaseAction _selectedAction;
+    private bool _isBusy;
 
     private void Awake()
     {
@@ -24,35 +28,85 @@ public class UnitActionSystem : MonoBehaviour
         }
     }
 
+    private void Start()
+    {
+        SetSelectedUnit(selectedUnit);
+    }
+
     private void Update()
+    {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        if (EventSystem.current.IsPointerOverGameObject())
+        {
+            return;
+        }
+        TryHandleUnitSelection();
+        HandleSelectedAction();
+    }
+
+    private void HandleSelectedAction()
     {
         if (Input.GetMouseButtonDown(0))
         {
-            if (TryHandleUnitSelection()) return;
-            
-            selectedUnit.Move(MouseWorld.GetPosition());
+            GridPosition mouseGridPosition = LevelGrid.Instance.GetGridPosition(MouseWorld.GetPosition());
+            if (_selectedAction.IsValidActionGridPosition(mouseGridPosition))
+            { 
+                SetBusy();
+                _selectedAction.TakeAction(mouseGridPosition,ClearBusy);
+            }
         }
     }
 
+    private void SetBusy()
+    {
+        _isBusy = true;
+    }
+
+    private void ClearBusy()
+    {
+        _isBusy = false;
+    }
     private bool TryHandleUnitSelection()
     {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit raycastHit, float.MaxValue, unitLayerMask))
+        if(Input.GetMouseButtonDown(0))
         {
-            if (raycastHit.transform.TryGetComponent<Unit>(out Unit unit))
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(ray, out RaycastHit raycastHit, float.MaxValue, unitLayerMask))
             {
-                SetSelectedUnit(unit);
-                return true;
+                if (raycastHit.transform.TryGetComponent<Unit>(out Unit unit))
+                {
+                    if (unit == selectedUnit)
+                    {
+                        return false;
+                    }
+                    SetSelectedUnit(unit);
+                    return true;
+                }
             }
         }
-
         return false;
     }
 
     private void SetSelectedUnit(Unit unit)
     {
         selectedUnit = unit;
+        SetSelectedAction(unit.GetMoveAction());
+        
         OnSelectedUnitChanged?.Invoke();
     }
-    
+
+    public void SetSelectedAction(BaseAction baseAction)
+    {
+        _selectedAction = baseAction;
+        OnSelectedActionChanged?.Invoke();
+    }
+
+    public BaseAction GetSelectedAction()
+    {
+        return _selectedAction;
+    }
 }
