@@ -3,15 +3,18 @@ using UnityEngine;
 
 public class Unit : MonoBehaviour
 {
-
     public static event Action OnAnyActionPointsChanged;
+    public static event EventHandler OnAnyUnitSpawned;
+    public static event EventHandler OnAnyUnitDead;
 
     [SerializeField] private bool isEnemy;
 
     private const int ACTION_POINTS_MAX = 2;
     private GridPosition _gridPosition;
     private MoveAction _moveAction;
+    private ShootAction _shootAction;
     private SpinAction _spinAction;
+    private HealthSystem _healthSystem;
 
     private BaseAction[] _baseActionsArray;
     private int _actionPoints = 2;
@@ -19,7 +22,9 @@ public class Unit : MonoBehaviour
     {
         _moveAction = GetComponent<MoveAction>();
         _spinAction = GetComponent<SpinAction>();
+        _shootAction = GetComponent<ShootAction>();
         _baseActionsArray = GetComponents<BaseAction>();
+        _healthSystem = GetComponent<HealthSystem>();
     }
 
     private void Start()
@@ -28,6 +33,9 @@ public class Unit : MonoBehaviour
         LevelGrid.Instance.AddUnitAtGridPosition(_gridPosition,this);
         
         TurnSystem.Instance.OnTurnChanged += OnTurnChanged;
+        _healthSystem.OnDead += HealthSystemOnOnDead;
+        
+        OnAnyUnitSpawned?.Invoke(this,EventArgs.Empty);
     }
 
     private void Update()
@@ -36,8 +44,9 @@ public class Unit : MonoBehaviour
         
         if (newGridPosition != _gridPosition)
         {
-            LevelGrid.Instance.UnitMovedGridPosition(this,_gridPosition,newGridPosition);
+            GridPosition oldGridPosition = _gridPosition;
             _gridPosition = newGridPosition;
+            LevelGrid.Instance.UnitMovedGridPosition(this,oldGridPosition,newGridPosition);
         }
     }
 
@@ -50,12 +59,21 @@ public class Unit : MonoBehaviour
     {
         return _spinAction;
     }
+    public ShootAction GetShootAction()
+    {
+        return _shootAction;
+    }
+    
 
     public GridPosition GetGridPosition()
     {
         return _gridPosition;
     }
 
+    public Vector3 GetWorldPosition()
+    {
+        return transform.position;
+    }
     public BaseAction[] GetBaseActionArray()
     {
         return _baseActionsArray;
@@ -103,5 +121,22 @@ public class Unit : MonoBehaviour
     public bool IsEnemy()
     {
         return isEnemy;
+    }
+
+    public void Damage(int damageAmount)
+    {
+        _healthSystem.Damage(damageAmount);
+    }
+    
+    private void HealthSystemOnOnDead()
+    {
+        LevelGrid.Instance.RemoveUnitAtGridPosition(_gridPosition,this);
+        OnAnyUnitDead?.Invoke(this,EventArgs.Empty);
+        Destroy(gameObject);
+    }
+
+    public float GetHealthNormalized()
+    {
+        return _healthSystem.GetHealthNormalized();
     }
 }
