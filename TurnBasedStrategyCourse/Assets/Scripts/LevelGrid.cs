@@ -10,7 +10,7 @@ public class LevelGrid : MonoBehaviour
 
     public event Action OnAnyUnitMovedGridPosition;
     
-    private GridSystem _gridSystem;
+    private GridSystem<GridObject> _gridSystem;
     private void Awake()
     {
         if (Instance == null)
@@ -21,8 +21,9 @@ public class LevelGrid : MonoBehaviour
         {
             Destroy(gameObject);
         }
-        _gridSystem = new GridSystem(10, 10,2f);
-        _gridSystem.CreateDebugObjects(gridDebugObjectPrefab);
+        _gridSystem = new GridSystem<GridObject>(10, 10,2f,
+            (GridSystem<GridObject> g,GridPosition gridPosition) =>  new GridObject(g,gridPosition));
+        //_gridSystem.CreateDebugObjects(gridDebugObjectPrefab);
     }
 
     public void AddUnitAtGridPosition(GridPosition gridPosition, Unit unit)
