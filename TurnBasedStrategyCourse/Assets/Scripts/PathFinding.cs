@@ -14,6 +14,7 @@ public class PathFinding : MonoBehaviour
     
     
     [SerializeField] private Transform gridDebugObjectPrefab;
+    [SerializeField] private LayerMask obstaclesLayerMask;
     private int _width;
     private int _height;
     private float _cellSize;
@@ -29,12 +30,37 @@ public class PathFinding : MonoBehaviour
         {
             Destroy(gameObject);
         }
-        _gridSystem = new GridSystem<PathNode>(10, 10,2f,
-          (GridSystem<PathNode> g,GridPosition gridPosition) =>  new PathNode(gridPosition));
-        _gridSystem.CreateDebugObjects(gridDebugObjectPrefab);
     }
 
-    public List<GridPosition> FindPath(GridPosition startGridPosition, GridPosition endGridPosition)
+    public void Setup(int width, int height, float cellSize)
+    {
+        _width = width;
+        _height = height;
+        _cellSize = cellSize;
+        
+        _gridSystem = new GridSystem<PathNode>(_width, _height,_cellSize,
+            (GridSystem<PathNode> g,GridPosition gridPosition) =>  new PathNode(gridPosition));
+        //_gridSystem.CreateDebugObjects(gridDebugObjectPrefab);
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int z = 0; z < height; z++)
+            {
+                GridPosition gridPosition = new GridPosition(x, z);
+                Vector3 worldPosition = LevelGrid.Instance.GetWorldPosition(gridPosition);
+                float raycastOffsetDistnace = 5f;
+                if (Physics.Raycast(worldPosition + Vector3.down * raycastOffsetDistnace,
+                        Vector3.up,
+                        raycastOffsetDistnace * 2,
+                        obstaclesLayerMask))
+                {
+                    GetNode(x,z).SetIsWalkable(false);
+                }
+            }
+        }
+    }
+
+    public List<GridPosition> FindPath(GridPosition startGridPosition, GridPosition endGridPosition, out int pathLenght)
     {
         List<PathNode> openList = new List<PathNode>();
         List<PathNode> closedList = new List<PathNode>();
@@ -68,6 +94,7 @@ public class PathFinding : MonoBehaviour
             if (currentNode == endNode)
             {
                 //Reached final node
+                pathLenght = endNode.GetFCost();
                 return CalculatePath(endNode);
             }
 
@@ -79,6 +106,12 @@ public class PathFinding : MonoBehaviour
             {
                 if (closedList.Contains(VARIABLE))
                 {
+                    continue;
+                }
+
+                if (!VARIABLE.IsWalkable())
+                {
+                    closedList.Add(VARIABLE);
                     continue;
                 }
 
@@ -100,6 +133,7 @@ public class PathFinding : MonoBehaviour
         }
         
         // No path found
+        pathLenght = 0;
         return null;
     }
 
@@ -198,5 +232,25 @@ public class PathFinding : MonoBehaviour
         }
 
         return gridPositionList;
+    }
+
+    public void SetWalkableGridPosition(GridPosition gridPosition,bool isWalkable)
+    {
+        _gridSystem.GetGridObject(gridPosition).SetIsWalkable(isWalkable);
+    }
+    public bool IsWalkableGridPosition(GridPosition gridPosition)
+    {
+        return _gridSystem.GetGridObject(gridPosition).IsWalkable();
+    }
+
+    public bool HasPath(GridPosition startGridPosition, GridPosition endGridPosition)
+    {
+        return FindPath(startGridPosition, endGridPosition,out int pathLenght) != null;
+    }
+
+    public int GetPathLenght(GridPosition startGridPosition, GridPosition endGridPosition)
+    {
+        FindPath(startGridPosition, endGridPosition, out int pathLenght);
+        return pathLenght;
     }
 }

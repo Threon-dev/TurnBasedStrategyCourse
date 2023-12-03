@@ -7,7 +7,9 @@ using UnityEngine;
 public class ShootAction : BaseAction
 {
     [SerializeField] private int maxShootDistance = 7;
+    [SerializeField] private LayerMask obstacleLayerMask;
 
+    public static event Action OnAnyShoot;
     public event EventHandler<OnShootEventArgs> OnShoot;
 
     public class OnShootEventArgs : EventArgs
@@ -83,6 +85,7 @@ public class ShootAction : BaseAction
 
     private void Shoot()
     {
+        OnAnyShoot?.Invoke();
         OnShoot?.Invoke(this,new OnShootEventArgs
         {
             targetUnit = _targetUnit,
@@ -138,6 +141,19 @@ public class ShootAction : BaseAction
 
                 if (targetUnit.IsEnemy() == _unit.IsEnemy())
                 {
+                    continue;
+                }
+
+                float unitShoulderHeight = 1.7f;
+                Vector3 unitWorldPosition = LevelGrid.Instance.GetWorldPosition(unitGridPosition);
+                Vector3 shootDir = (targetUnit.GetWorldPosition() - unitWorldPosition).normalized;
+
+                if (Physics.Raycast(unitWorldPosition + Vector3.up * unitShoulderHeight,
+                        shootDir,
+                        Vector3.Distance(unitWorldPosition, targetUnit.GetWorldPosition()),
+                        obstacleLayerMask))
+                {
+                    //Blocked by an obstacle
                     continue;
                 }
                 
