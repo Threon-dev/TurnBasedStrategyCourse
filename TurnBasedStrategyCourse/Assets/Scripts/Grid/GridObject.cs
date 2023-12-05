@@ -7,6 +7,7 @@ public class GridObject
     private GridSystem<GridObject> _gridSystem;
     private GridPosition _gridPosition;
     public List<Unit> UnitList { private set; get; }
+    private IInteractable interactable;
 
     public GridObject(GridSystem<GridObject> gridSystem, GridPosition gridPosition)
     {
@@ -51,5 +52,15 @@ public class GridObject
         }
 
         return null;
+    }
+
+    public IInteractable GetInteractable()
+    {
+        return interactable;
+    }
+
+    public void SetInteractable(IInteractable interactable)
+    {
+        this.interactable = interactable;
     }
 }
